@@ -8,23 +8,9 @@ const expressJwt = require('express-jwt')
 const requestIp = require('request-ip')
 
 const environment = require('./models/environment')
-const jwtCert = require('./models/jwt-certificate')
 const teamsLogger = require('./models/teams-logger')
 // set up Node.js HTTP port
 const port = process.env.NODE_PORT
-
-// JWT path exceptions - these paths can be used without a JWT required
-const exceptions = {
-  path: [{
-    // this application version
-    url: /\/api\/v1\/version/i,
-    methods: ['GET']
-  }, {
-    // cisco SSO
-    url: /\/api\/v1\/sso/i,
-    methods: ['POST']
-  }]
-}
 
 // init express app, and configure it
 const app = express()
@@ -35,7 +21,6 @@ app.use(cors())
 // get remote IP address of request client as req.clientIp
 app.use(requestIp.mw())
 // require valid JWT for all paths unless in the exceptins list, and parse JWT payload into req.user
-app.use(expressJwt({ secret: jwtCert }).unless(exceptions))
 
 // run this code on every request
 app.use(async function (req, res, next) {
@@ -79,21 +64,16 @@ Routes
 // get this API version
 app.use('/api/v1/version', require('./routes/version'))
 
-// do SSO login
-app.use('/api/v1/sso', require('./routes/sso'))
-
-// validate JWT
-app.use('/api/v1/valid', require('./routes/valid'))
-
-// manage helper bot users
-app.use('/api/v1/user', require('./routes/user'))
-
-// manage helper bot rooms
-app.use('/api/v1/room', require('./routes/room'))
+// webex OAUTH2 SSO login
+app.use('/api/v1/oauth2', require('./routes/oauth2'))
 
 // start listening
-app.listen(port, () => {
+const server = app.listen(port, () => {
   const message = `${environment.name} version ${environment.version} service started on ${environment.hostname}. Listening on port ${port}.`
   console.log(message)
   teamsLogger.log('service started on port ' + port)
 })
+
+// start web socket server on same port
+const websocket = require('./models/websocket')
+websocket.start(server)

@@ -11,7 +11,7 @@ Group=administrator
 Environment=PATH=/usr/bin:/usr/local/bin
 Environment=NODE_ENV=production
 # if extra CA certs trust are needed, specify them like this
-Environment=NODE_EXTRA_CA_CERTS=certs/ca.pem
+# Environment=NODE_EXTRA_CA_CERTS=certs/ca.pem
 # working directory where the code lives
 WorkingDirectory=/opt/dcloud/helper-bot-api
 # run the application with node
