@@ -118,7 +118,7 @@ function newConnection (ws, req) {
           agents.push(agent)
         }
         // see if any customers are waiting on this agent
-        const waiting = customers.filter(c => c.agent === email && c.waiting === true)
+        const waiting = customers.find(c => c.agent === email && c.waiting === true)
         if (waiting.length) {
           for (const customer of waiting) {
             // create room, add guest and agent
