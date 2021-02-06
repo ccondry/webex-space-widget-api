@@ -147,7 +147,14 @@ function newConnection (ws, req) {
         jwt,
         ws
       }
-      customers[sub] = customer
+      const index = customers.findIndex(v => v.id === id)
+      if (index >= 0) {
+        // replace existing connection with new one
+        customers.splice(index, 1, customer)
+      } else {
+        // add
+        customers.push(customer)
+      }
       // find the agent
       const agent = agents.find(v => v.email === json.agent)
       if (agent) {
