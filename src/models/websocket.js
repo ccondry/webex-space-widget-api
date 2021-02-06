@@ -105,6 +105,13 @@ function newConnection (ws, req) {
     if (ai >= 0) {
       agents.splice(ai, 1)
     }
+    // close the other half of the websocket connection
+    if (customer && customer.ws) {
+      customer.ws.close()
+    }
+    if (agent && agent.ws) {
+      agent.ws.close()
+    }
   })
   // new websocket connection started - set up handler function for its messages
   ws.on('message', async (message) => {
