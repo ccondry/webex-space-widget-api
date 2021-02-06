@@ -5,12 +5,12 @@ if [ $? -eq 0 ]; then
   echo "edit .env file first"
   vim .env
   echo "installing systemd service..."
-  sudo cp systemd.service /lib/systemd/system/helper-bot-api.service
+  sudo cp systemd.service /lib/systemd/system/webex-space-widget-api.service
   echo "enabling systemd service..."
-  sudo systemctl enable helper-bot-api.service
+  sudo systemctl enable webex-space-widget-api.service
   echo "starting systemd service..."
-  systemctl start helper-bot-api.service
-  echo "install helper-bot-api.service is complete."
+  systemctl start webex-space-widget-api.service
+  echo "install webex-space-widget-api.service is complete."
 else
   echo "yarn failed"
 fi
