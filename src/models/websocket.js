@@ -148,8 +148,10 @@ function newConnection (ws, req) {
       const loggedIn = await webex.guestLogin(jwt)
       console.log('logged in guest issuer', json.name)
       const token = loggedIn.token
+      const id = loggedIn.id
       // cache the token and connection details
       const customer = {
+        id,
         agent: json.agent,
         name: json.name,
         request: json.request,
