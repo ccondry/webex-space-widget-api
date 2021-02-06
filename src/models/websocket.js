@@ -3,6 +3,7 @@ const WebSocket = require('ws')
 // our current websocket connections
 const agents = []
 const customers = []
+const rooms = []
 const webex = require('./webex')
 const makeJwt = require('./make-jwt')
 const url = require('url')
@@ -15,12 +16,20 @@ function start (server) {
 }
 
 async function startChat ({agent, customer}) {
+  // are agent or customer already chatting?
+  const existing = rooms.find(v => v.agent === agent || v.customer === customer)
+  if (existing) {
+    // don't start the chat
+    return
+  }
   try {
     // create room with guest token
     const room = await webex.createRoom({
       token: customer.token,
       title: customer.request
     })
+    // cache room
+    rooms.push({agent, customer, room})
     console.log('created room for customer chat with agent', agent.email, ':', room.id)
     // cache room info
     customer.room = room
