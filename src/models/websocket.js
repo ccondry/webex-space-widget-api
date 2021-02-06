@@ -86,6 +86,15 @@ function newConnection (ws, req) {
         console.log('failed to delete room', customer.room.id, 'with agent', agent.email)
       }
     }
+    // remove agent and customer from cache
+    const ci = customers.findIndex(v => v === customer)
+    if (ci >= 0) {
+      customers.splice(ci, 1)
+    }
+    const ai = agents.findIndex(v => v === agent)
+    if (ai >= 0) {
+      agents.splice(ai, 1)
+    }
   })
   // new websocket connection started - set up handler function for its messages
   ws.on('message', async (message) => {
