@@ -4,6 +4,8 @@ const WebSocket = require('ws')
 const agents = []
 const customers = []
 const webex = require('./webex')
+const makeJwt = require('./make-jwt')
+const url = require('url')
 
 function start (server) {
   console.log('starting websocket server')
@@ -12,15 +14,79 @@ function start (server) {
   wss.on('connection', newConnection)
 }
 
-function startChat ({agent, customer}) {
-  // console.log('startChat', agent, customer)
-  // TODO create space, join agent and customer, then send websocket messages
-  const spaceId = 'Y2lzY29zcGFyazovL3VzL1JPT00vMjNjOWIxMjAtMDU3My0xMWVhLWEyOGItODUwN2UzNDFmNTM1'
-  agent.ws.send(JSON.stringify({spaceId}))
-  customer.ws.send(JSON.stringify({spaceId}))
+async function startChat ({agent, customer}) {
+  try {
+    // create room with guest token
+    const room = await webex.createRoom({
+      token: customer.token,
+      title: customer.request
+    })
+    console.log('created room for customer chat with agent', agent.email, ':', room.id)
+    // cache room info
+    customer.room = room
+    agent.room = room
+    // notify customer web client
+    customer.ws.send(JSON.stringify({
+      spaceId: room.id,
+      token: customer.token,
+      jwt: customer.jwt
+    }))
+    console.log('sent customer websocket message with room ID', room.id)
+    // add agent to room
+    await webex.createMembership({
+      token: customer.token,
+      personEmail: agent.email,
+      roomId: room.id
+    })
+    console.log('added agent', agent.email, 'to room ID', room.id)
+    // notify agent web clients
+    agent.ws.send(JSON.stringify({
+      spaceId: room.id
+    }))
+    console.log('sent agent websocket message with room ID', room.id)
+  } catch (e) {
+    console.log('failed during websocket.startChat:', e.message)
+  }
 }
 
-function newConnection (ws) {
+function newConnection (ws, req) {
+  const parsed = url.parse(req.url, true)
+  console.log('new websocket connection - query =', parsed.query)
+  ws.on('close', async (code) => {
+    console.log('websocket closed:', code)
+    // find the agent or customer this connection belongs to
+    const wsAgent = agents.find(v => v.ws === ws)
+    // console.log('wsAgent', wsAgent.email)
+    const wsCustomer = customers.find(v => v.ws === ws)
+    // console.log('wsCustomer', wsCustomer.name)
+    // found customer with an existing room?
+    let customer
+    let agent
+    if (wsCustomer && wsCustomer.room) {
+      // websocket belongs to customer. use their token to close the room.
+      console.log('customer websocket closed')
+      customer = wsCustomer
+      agent = agents.find(v => v.room === wsCustomer.room)
+    } else if (wsAgent && wsAgent.room) {
+      // websocket belongs to agent. find associated customer
+      console.log('agent websocket closed')
+      agent = wsAgent
+      customer = customers.find(v => v.room === wsAgent.room)
+    }
+    // was there a room found?
+    if (customer) {
+      // use customer token to close the room
+      try {
+        await webex.deleteRoom({
+          token: customer.token,
+          id: customer.room.id
+        })
+        console.log('deleted room', customer.room.id, 'with agent', agent.email)
+      } catch (e) {
+        console.log('failed to delete room', customer.room.id, 'with agent', agent.email)
+      }
+    }
+  })
   // new websocket connection started - set up handler function for its messages
   ws.on('message', async (message) => {
     const json = JSON.parse(message)
@@ -43,7 +109,7 @@ function newConnection (ws) {
           agents.push(agent)
         }
         // see if any customers are waiting on this agent
-        const waiting = customers.filter(c => c.waiting === email)
+        const waiting = customers.filter(c => c.agent === email && c.waiting === true)
         if (waiting.length) {
           for (const customer of waiting) {
             // create room, add guest and agent
@@ -53,17 +119,26 @@ function newConnection (ws) {
       } catch (e) {
         console.log('failed to get webex me details for websocket client:', e.message)
       }
-    } else if (json.issuerId) {
+    } else if (json.name) {
       // customer message
-      // cache the connection details
+      // create guest issuer JWT
+      // TODO generate sub
+      const sub = 'guest-user-12345'
+      const jwt = makeJwt({sub, name: json.name})
+      // get api token for guest issuer
+      const loggedIn = await webex.guestLogin(jwt)
+      console.log('logged in guest issuer', json.name)
+      const token = loggedIn.token
+      // cache the token and connection details
       const customer = {
-        issuerId: json.issuerId,
         agent: json.agent,
         name: json.name,
         request: json.request,
+        token,
+        jwt,
         ws
       }
-      customers[json.issuerId] = customer
+      customers[sub] = customer
       // find the agent
       const agent = agents.find(v => v.email === json.agent)
       if (agent) {
@@ -71,7 +146,7 @@ function newConnection (ws) {
         startChat({agent, customer})
       } else {
         // wait for agent to connect
-        customer.waiting = json.agent
+        customer.waiting = true
       }
     } else {
       // invalid message
