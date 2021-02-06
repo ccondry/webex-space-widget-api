@@ -1,7 +1,7 @@
 {
-  "name": "isg-api",
+  "name": "webex-space-widget-api",
   "version": "2021.2.4",
-  "description": "REST API for the dCloud ISG Webex demo",
+  "description": "REST API for the dCloud Webex space widget demo",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index",
