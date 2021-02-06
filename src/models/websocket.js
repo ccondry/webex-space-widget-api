@@ -31,19 +31,19 @@ async function startChat ({agent, customer}) {
       token: customer.token,
       jwt: customer.jwt
     }))
-    console.log('sent customer websocket message with room ID', room.id)
+    // console.log('sent customer websocket message with room ID', room.id)
     // add agent to room
     await webex.createMembership({
       token: customer.token,
       personEmail: agent.email,
       roomId: room.id
     })
-    console.log('added agent', agent.email, 'to room ID', room.id)
+    // console.log('added agent', agent.email, 'to room ID', room.id)
     // notify agent web clients
     agent.ws.send(JSON.stringify({
       spaceId: room.id
     }))
-    console.log('sent agent websocket message with room ID', room.id)
+    // console.log('sent agent websocket message with room ID', room.id)
   } catch (e) {
     console.log('failed during websocket.startChat:', e.message)
   }
@@ -51,14 +51,15 @@ async function startChat ({agent, customer}) {
 
 function newConnection (ws, req) {
   const parsed = url.parse(req.url, true)
-  console.log('new websocket connection - query =', parsed.query)
+  // console.log('new websocket connection - query =', parsed.query)
+  // socket close
   ws.on('close', async (code) => {
-    console.log('websocket closed:', code)
+    // console.log('websocket closed:', code)
     // find the agent or customer this connection belongs to
     const wsAgent = agents.find(v => v.ws === ws)
-    // console.log('wsAgent', wsAgent.email)
+    console.log('wsAgent', wsAgent ? wsAgent.email : 'not found')
     const wsCustomer = customers.find(v => v.ws === ws)
-    // console.log('wsCustomer', wsCustomer.name)
+    console.log('wsCustomer', wsCustomer ? wsCustomer.name : 'not found')
     // found customer with an existing room?
     let customer
     let agent
@@ -99,7 +100,7 @@ function newConnection (ws, req) {
   // new websocket connection started - set up handler function for its messages
   ws.on('message', async (message) => {
     const json = JSON.parse(message)
-    console.log('websocket message:', message)
+    // console.log('websocket message:', message)
     // agent or customer?
     if (json.token) {
       // agent - get agent webex user profile
