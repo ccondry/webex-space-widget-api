@@ -1,6 +1,6 @@
 {
   "name": "webex-space-widget-api",
-  "version": "2021.2.6",
+  "version": "2021.3.16",
   "description": "REST API for the dCloud Webex space widget demo",
   "main": "src/index.js",
   "scripts": {
